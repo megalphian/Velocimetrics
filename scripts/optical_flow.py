@@ -42,11 +42,13 @@ class App:
     def run(self):
         while True:
             cam_ret, cam_frame = self.cam.read()
+	    if cam_frame is None:
+	        break
 	    size_param = cam_frame.shape
 	    frame = cam_frame[size_param[0]/2:size_param[0], 0:size_param[1]]; 
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             vis = frame.copy()
-
+	    cv2.GaussianBlur(vis, (15, 15), 0)
             if len(self.tracks) > 0:
                 img0, img1 = self.prev_gray, frame_gray
                 p0 = np.float32([tr[-1] for tr in self.tracks]).reshape(-1, 1, 2)
@@ -62,7 +64,7 @@ class App:
                     if len(tr) > self.track_len:
                         del tr[0]
                     new_tracks.append(tr)
-                    cv2.circle(vis, (x, y), 2, (0, 255, 0), -1)
+                    #cv2.circle(vis, (x, y), 2, (0, 255, 0), -1)
                 self.tracks = new_tracks
                 cv2.polylines(vis, [np.int32(tr) for tr in self.tracks], False, (0, 255, 0))
 
