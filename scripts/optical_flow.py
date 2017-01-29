@@ -41,7 +41,9 @@ class App:
 
     def run(self):
         while True:
-            ret, frame = self.cam.read()
+            cam_ret, cam_frame = self.cam.read()
+	    size_param = cam_frame.shape
+	    frame = cam_frame[size_param[0]/2:size_param[0], 0:size_param[1]]; 
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             vis = frame.copy()
 
@@ -77,9 +79,10 @@ class App:
 
             self.frame_idx += 1
             self.prev_gray = frame_gray
-            cv2.imshow('lk_track', vis)
+	    cam_frame[size_param[0]/2:size_param[0], 0:size_param[1]] = vis;
+            cv2.imshow('lk_track', cam_frame)
 
-            ch = cv2.waitKey(1)
+            ch = cv2.waitKey(30)
             if ch == 27:
                 break
 
