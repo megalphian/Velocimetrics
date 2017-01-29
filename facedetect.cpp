@@ -13,8 +13,8 @@ Point roi_pt1, roi_pt2;
 bool roi_captured = false;
 Mat cap_img;
 float input_size, meters_per_pixel; // in meters
-float meters_per_sec, pixel_per_sec;
-bool show_speed = true;
+float meters_per_sec;
+bool show_speed = false;
 
 static void help()
 {
@@ -80,7 +80,7 @@ int main( int argc, const char** argv )
     if( inputName.empty() || (isdigit(inputName[0]) && inputName.size() == 1) )
     {
         int c = inputName.empty() ? 0 : inputName[0] - '0';
-        if(!capture.open(c))
+        if(!capture.open(1))
             cout << "Capture from camera #" <<  c << " didn't work" << endl;
     }
     else
@@ -110,9 +110,8 @@ int main( int argc, const char** argv )
               t = (double)getTickCount() - t;
               t = (t /getTickFrequency());
               frame_count = 0;
-              pixel_per_sec = (sqrt(pow(centers_of_roi[9].y - centers_of_roi[0].y, 2) + pow(centers_of_roi[9].x - centers_of_roi[0].x, 2) )/ t  );
-              meters_per_sec = meters_per_pixel * pixel_per_sec;
-              //cout << "meters per s ===== " << meters_per_sec << endl;
+              meters_per_sec = meters_per_pixel * (sqrt(pow(centers_of_roi[9].y - centers_of_roi[0].y, 2) + pow(centers_of_roi[9].x - centers_of_roi[0].x, 2) )/ t  );
+              cout << "meters per s ===== " << meters_per_sec << endl;
               centers_of_roi.clear();
             }
 
@@ -167,10 +166,10 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
 
     t = (double)getTickCount();
     cascade.detectMultiScale( smallImg, faces,
-        1.3, 2, 0
-        |CASCADE_FIND_BIGGEST_OBJECT,
+        1.1, 2, 0
+        //|CASCADE_FIND_BIGGEST_OBJECT
         //|CASCADE_DO_ROUGH_SEARCH
-        //|CASCADE_SCALE_IMAGE,
+        |CASCADE_SCALE_IMAGE,
         Size(30, 30) );
     if( tryflip )
     {
@@ -191,7 +190,6 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
     for ( size_t i = 0; i < faces.size(); i++ )
     {
         if(i > 1){
-          cout << "exiting" << endl;
           break;
         }
         show_speed = true;
@@ -213,18 +211,18 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
             rectangle( img, cvPoint(cvRound(r.x*scale), cvRound(r.y*scale)),
                        cvPoint(cvRound((r.x + r.width-1)*scale), cvRound((r.y + r.height-1)*scale)),
                        color, 3, 8, 0);
-        centers_of_roi.push_back(Point(cvRound(r.x*scale), cvRound(r.y*scale)));
+        centers_of_roi.push_back(center);
 
         if (show_speed){
           ostringstream temp_;
-          temp_ << pixel_per_sec;
-          putText(img, temp_.str(), Point(cvRound(r.x*scale), cvRound(r.y*scale)), FONT_HERSHEY_SIMPLEX, 1, Scalar(0,255,0));
+          temp_ << meters_per_sec;
+          putText(img, temp_.str(), Point(cvRound(r.x*scale), cvRound(r.y*scale)), FONT_HERSHEY_SIMPLEX, 1, Scalar(225,225 ,225));
         }
       }
       show_speed = false;
       ostringstream str_;
       str_ << meters_per_pixel;
-      putText(img, str_.str(), Point(50,50), FONT_HERSHEY_SIMPLEX, 1, Scalar(225,225,225));
+      putText(img, str_.str(), Point(50,50), FONT_HERSHEY_SIMPLEX, 1, Scalar(225,225 ,225));
       imshow( "result", img );
 }
 
@@ -260,6 +258,7 @@ void selectALine(int event, int x, int y, int flags, void *param){
         roi_pt2.y = y;
         line(cap_img, roi_pt1, roi_pt2, Scalar(110, 220, 0), 2);
         imshow("My_Win",cap_img);
+        cout << roi_pt1.x << roi_pt1.y << endl;
 
         roi_captured = true;
 
