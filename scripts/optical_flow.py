@@ -36,7 +36,7 @@ feature_params = dict( maxCorners = 500,
 _Plotting = plotting()
 
 class App:
-    def __init__(self, video_src):
+    def __init__(self, video_src, graph_on):
         self.track_len = 10
         self.detect_interval = 5
         self.tracks = []
@@ -48,8 +48,11 @@ class App:
         self._speed = None
         self.car_each_frame = []
         self.car_counter = 0
+        self.graph_on = graph_on
 
-        _Plotting.launch_plt()
+        if self.graph_on:
+            _Plotting.launch_plt()
+
 
     def run(self):
     	global counter
@@ -69,12 +72,14 @@ class App:
             vis = frame.copy()
     	    cv2.GaussianBlur(vis, (15, 15), 0)
     	    cars = car_cascade.detectMultiScale(vis, 1.1, 1)
-            self.car_each_frame.append([len(cars), self.frame_idx])
-            _Plotting.xdata.append(self.frame_idx)
-            _Plotting.ydata.append(len(cars))
             cv2.putText(vis, "cars detected", (10, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), thickness = 2)
             cv2.putText(vis, str(len(cars)), (20, 170), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), thickness = 3)
-            _Plotting.on_running()
+
+            _Plotting.xdata.append(self.frame_idx)
+            _Plotting.ydata.append(len(cars))
+
+            if self.graph_on:
+                _Plotting.on_running()
 
             if len(self.tracks) > 0:
                 img0, img1 = self.prev_gray, frame_gray
@@ -87,9 +92,9 @@ class App:
                 self._speed = (p1-p0)*fps
                 self.good_speed = self._speed < 0
 
-                print(len(self._speed), len(self.tracks))
+                #print(len(self._speed), len(self.tracks))
 
-                print ("Speed = ",self._speed)
+                #print ("Speed = ",self._speed)
             	new_tracks = []
 
                 for tr, (x, y), good_flag in zip(self.tracks, p1.reshape(-1, 2), good):
@@ -143,19 +148,19 @@ class App:
             #raw_input("Press Enter to continue...")
             if ch == 27:
                     break
-        plt.show()
 
 
 def main():
     import sys
-    counter = 0
     try:
         video_src = sys.argv[1]
+        graph_switch = sys.argv[2]
+        _Plotting.graph_on = int(graph_switch)
     except:
         video_src = 0
 
     print(__doc__)
-    App(video_src).run()
+    App(video_src, int(graph_switch)).run()
     #digits_video.main()
     cv2.destroyAllWindows()
 

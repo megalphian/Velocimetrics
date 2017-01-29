@@ -6,32 +6,12 @@ class plotting:
         self.figure = None
         self.lines = None
         self.ax = None
-        plt.ion()
         self.xdata = []
         self.ydata = []
+        self.graph_on = 1
 
-
-    def point_graph(self,data):
-        """
-        input data is a nested list [[[x,y]]...[[x1,y1]]]
-        """
-        new_x = []
-        new_y = []
-        for i in data:
-            for j in i:
-                new_x.append(j[0])
-                new_y.append(j[1])
-        interval = (max(new_x) - min(new_x))/len(new_x)
-        print new_x, new_y, interval
-        plt.plot(new_x, new_y, 'ro')
-        plt.axis([min(new_x) - interval, max(new_x) + interval,
-                    min(new_y) - interval, max(new_y)+ interval], interval)
-        plt.show()
-
-    def realtime_plotting(self, h1, g_plt, data):
-        h1.set_xdata(numpy.append(h1.get_xdata(), data[1]))
-        h1.set_ydata(numpy.append(h1.get_ydata(), data[0]))
-        g_plt.draw()
+        if self.graph_on:
+            plt.ion()
 
     def launch_plt(self):
         self.figure, self.ax = plt.subplots()
