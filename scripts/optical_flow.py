@@ -22,7 +22,7 @@ import numpy as np
 import cv2
 from time import clock
 from math import *
-
+from data_processing import *
 
 lk_params = dict( winSize  = (15, 15),
                   maxLevel = 2,
@@ -76,6 +76,8 @@ class App:
                 self._speed = (p1-p0)*fps
                 self.good_speed = self._speed < 0
 
+                point_graph(self._speed)
+
                 print(len(self._speed), len(self.tracks))
 
                 print ("Speed = ",self._speed)
@@ -109,7 +111,7 @@ class App:
                         speed_sum = speed_sum + speed_temp
                     count  = count + 1
                 if pt_in > 0 and clock() - t < 0.025:
-                    cv2.putText(vis, str(round(speed_sum/pt_in, 2)), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), thickness = 2)
+                    cv2.putText(vis, str(round(speed_sum/pt_in, 2)), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), thickness = 2)
             if self.frame_idx % self.detect_interval == 0:
                 #counter +=1
                 #print ("Counter ", counter)
@@ -127,7 +129,7 @@ class App:
             self.prev_gray = frame_gray
             cam_frame[size_param[0]/2:size_param[0], 0:size_param[1]] = vis;
             cv2.imshow('lk_track', cam_frame)
-            ch = cv2.waitKey(25)
+            ch = cv2.waitKey(30)
             #raw_input("Press Enter to continue...")
             if ch == 27:
                     break
