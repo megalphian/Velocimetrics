@@ -21,7 +21,6 @@ from __future__ import print_function
 import numpy as np
 import cv2
 from time import clock
-from math import *
 
 
 lk_params = dict( winSize  = (15, 15),
@@ -40,47 +39,44 @@ class App:
         self.tracks = []
         self.cam = cv2.VideoCapture(video_src)
         self.frame_idx = 0
-        global cascade_src
-        cascade_src = '../data/cars.xml'
-        self.good_speed = None
-        self._speed = None
+	global cascade_src
+	cascade_src = '../data/cars.xml'
 
     def run(self):
-    	global counter
-    	global temp
-    	car_cascade = cv2.CascadeClassifier(cascade_src)
-    	temp = []
-    	counter = 0
-    	fps = self.cam.get(cv2.CAP_PROP_FPS)
+	global counter
+	global temp
+	car_cascade = cv2.CascadeClassifier(cascade_src)
+	temp = []	
+	counter = 0
+	fps = self.cam.get(cv2.CAP_PROP_FPS)
         print ("Frames per second using video.get(cv2.CAP_PROP_FPS) :",fps)
         while True:
             cam_ret, cam_frame = self.cam.read()
-    	    if cam_frame is None:
-    	        break
-    	    size_param = cam_frame.shape
-    	    frame = cam_frame[size_param[0]/2:size_param[0], 0:size_param[1]];
+	    if cam_frame is None:
+	        break
+	    size_param = cam_frame.shape
+	    frame = cam_frame[size_param[0]/2:size_param[0], 0:size_param[1]]; 
             frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             vis = frame.copy()
-    	    cv2.GaussianBlur(vis, (15, 15), 0)
-    	    cars = car_cascade.detectMultiScale(vis, 1.1, 1)
-            cv2.putText(vis, "cars detected", (10, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), thickness = 2)
-            cv2.putText(vis, str(len(cars)), (20, 170), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), thickness = 3)
+	    cv2.GaussianBlur(vis, (15, 15), 0)
+	    cars = car_cascade.detectMultiScale(vis, 1.1, 1)
+	    for (x,y,w,h) in cars:
+        	cv2.rectangle(vis,(x,y),(x+w,y+h),(0,0,255),2)
             if len(self.tracks) > 0:
                 img0, img1 = self.prev_gray, frame_gray
                 p0 = np.float32([tr[-1] for tr in self.tracks]).reshape(-1, 1, 2)
-		        #print ("Data", tr)
+		#print ("Data", tr)
                 p1, st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
                 p0r, st, err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
                 d = abs(p0-p0r).reshape(-1, 2).max(-1)
                 good = d < 1
-                self._speed = (p1-p0)*fps
-                self.good_speed = self._speed < 0
-
-                print(len(self._speed), len(self.tracks))
-
-                print ("Speed = ",self._speed)
-            	new_tracks = []
-
+		speed = (p1-p0)*fps
+		good_speed = speed < 0 
+		
+			
+		print ("Speed = ",speed)                
+		new_tracks = []
+		
                 for tr, (x, y), good_flag in zip(self.tracks, p1.reshape(-1, 2), good):
                     if not good_flag:
                         continue
@@ -90,30 +86,15 @@ class App:
                     new_tracks.append(tr)
                     #cv2.circle(vis, (x, y), 2, (0, 255, 0), -1)
                 self.tracks = new_tracks
-                for i in range(0,len(self.good_speed)):
-        			if self.good_speed[i][0] is True:
-        				temp = [self._speed[i][0]]
+		for i in range(0,len(good_speed)):
+			if good_speed[i][0] is True:
+				temp = [speed[i][0]]
                 cv2.polylines(vis, [np.int32(tr) for tr in self.tracks], False, (0, 255, 0))
 
-    	    for (x,y,w,h) in cars:
-            	cv2.rectangle(vis,(x,y),(x+w,y+h),(0,0,255),2)
-                count = 0
-                speed_sum = 0
-                pt_in = 0
-                t = clock()
-                for pts in self.tracks:
-                    if x < pts[0][0] < (x + w) and y < pts[0][1] < (y + h):
-                        pt_in = pt_in + 1
-                        cv2.circle(vis, (pts[0][0], pts[0][1]), 3, (0, 0, 255), 2)
-                        speed_temp = sqrt( pow(self._speed[count][0][0],2) + pow(self._speed[count][0][1],2))
-                        speed_sum = speed_sum + speed_temp
-                    count  = count + 1
-                if pt_in > 0 and clock() - t < 0.025:
-                    cv2.putText(vis, str(round(speed_sum/pt_in, 2)), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), thickness = 2)
             if self.frame_idx % self.detect_interval == 0:
                 #counter +=1
-                #print ("Counter ", counter)
-                mask = np.zeros_like(frame_gray)
+		#print ("Counter ", counter)
+		mask = np.zeros_like(frame_gray)
                 mask[:] = 255
                 for x, y in [np.int32(tr[-1]) for tr in self.tracks]:
                     cv2.circle(mask, (x, y), 5, 0, -1)
@@ -122,19 +103,19 @@ class App:
                     for x, y in np.float32(p).reshape(-1, 2):
                         self.tracks.append([(x, y)])
 
-            #print ("Frame_IDX", self.frame_idx)
+	    #print ("Frame_IDX", self.frame_idx)
             self.frame_idx += 1
             self.prev_gray = frame_gray
-            cam_frame[size_param[0]/2:size_param[0], 0:size_param[1]] = vis;
+	    cam_frame[size_param[0]/2:size_param[0], 0:size_param[1]] = vis;
             cv2.imshow('lk_track', cam_frame)
             ch = cv2.waitKey(25)
-            #raw_input("Press Enter to continue...")
-            if ch == 27:
-                    break
+            raw_input("Press Enter to continue...")
+	    if ch == 27:
+                break
 
 def main():
     import sys
-    counter = 0
+    counter = 0	
     try:
         video_src = sys.argv[1]
     except:
