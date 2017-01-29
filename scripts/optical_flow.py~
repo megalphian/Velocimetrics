@@ -1,0 +1,130 @@
+
+#!/usr/bin/env python
+
+'''
+Lucas-Kanade tracker
+====================
+Lucas-Kanade sparse optical flow demo. Uses goodFeaturesToTrack
+for track initialization and back-tracking for match verification
+between frames.
+Usage
+-----
+lk_track.py [<video_source>]
+Keys
+----
+ESC - exit
+'''
+
+# Python 2/3 compatibility
+from __future__ import print_function
+
+import numpy as np
+import cv2
+from time import clock
+
+
+lk_params = dict( winSize  = (15, 15),
+                  maxLevel = 2,
+                  criteria = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
+
+feature_params = dict( maxCorners = 500,
+                       qualityLevel = 0.3,
+                       minDistance = 7,
+                       blockSize = 7 )
+
+class App:
+    def __init__(self, video_src):
+        self.track_len = 10
+        self.detect_interval = 5
+        self.tracks = []
+        self.cam = cv2.VideoCapture(video_src)
+        self.frame_idx = 0
+	global cascade_src
+	cascade_src = '../data/cars.xml'
+
+    def run(self):
+	global counter
+	global temp
+	car_cascade = cv2.CascadeClassifier(cascade_src)
+	temp = []	
+	counter = 0
+	fps = self.cam.get(cv2.CAP_PROP_FPS)
+        print ("Frames per second using video.get(cv2.CAP_PROP_FPS) :",fps)
+        while True:
+            cam_ret, cam_frame = self.cam.read()
+	    if cam_frame is None:
+	        break
+	    size_param = cam_frame.shape
+	    frame = cam_frame[size_param[0]/2:size_param[0], 0:size_param[1]]; 
+            frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            vis = frame.copy()
+	    cv2.GaussianBlur(vis, (15, 15), 0)
+	    cars = car_cascade.detectMultiScale(vis, 1.1, 1)
+	    for (x,y,w,h) in cars:
+        	cv2.rectangle(vis,(x,y),(x+w,y+h),(0,0,255),2)
+            if len(self.tracks) > 0:
+                img0, img1 = self.prev_gray, frame_gray
+                p0 = np.float32([tr[-1] for tr in self.tracks]).reshape(-1, 1, 2)
+		#print ("Data", tr)
+                p1, st, err = cv2.calcOpticalFlowPyrLK(img0, img1, p0, None, **lk_params)
+                p0r, st, err = cv2.calcOpticalFlowPyrLK(img1, img0, p1, None, **lk_params)
+                d = abs(p0-p0r).reshape(-1, 2).max(-1)
+                good = d < 1
+		speed = (p1-p0)*fps
+		good_speed = speed < 0 
+		
+			
+		print ("Speed = ",speed)                
+		new_tracks = []
+		
+                for tr, (x, y), good_flag in zip(self.tracks, p1.reshape(-1, 2), good):
+                    if not good_flag:
+                        continue
+                    tr.append((x, y))
+                    if len(tr) > self.track_len:
+                        del tr[0]
+                    new_tracks.append(tr)
+                    #cv2.circle(vis, (x, y), 2, (0, 255, 0), -1)
+                self.tracks = new_tracks
+		for i in range(0,len(good_speed)):
+			if good_speed[i][0] is True:
+				temp = [speed[i][0]]
+                cv2.polylines(vis, [np.int32(tr) for tr in self.tracks], False, (0, 255, 0))
+
+            if self.frame_idx % self.detect_interval == 0:
+                #counter +=1
+		#print ("Counter ", counter)
+		mask = np.zeros_like(frame_gray)
+                mask[:] = 255
+                for x, y in [np.int32(tr[-1]) for tr in self.tracks]:
+                    cv2.circle(mask, (x, y), 5, 0, -1)
+                p = cv2.goodFeaturesToTrack(frame_gray, mask = mask, **feature_params)
+                if p is not None:
+                    for x, y in np.float32(p).reshape(-1, 2):
+                        self.tracks.append([(x, y)])
+
+	    #print ("Frame_IDX", self.frame_idx)
+            self.frame_idx += 1
+            self.prev_gray = frame_gray
+	    cam_frame[size_param[0]/2:size_param[0], 0:size_param[1]] = vis;
+            cv2.imshow('lk_track', cam_frame)
+            ch = cv2.waitKey(25)
+            raw_input("Press Enter to continue...")
+	    if ch == 27:
+                break
+
+def main():
+    import sys
+    counter = 0	
+    try:
+        video_src = sys.argv[1]
+    except:
+        video_src = 0
+
+    print(__doc__)
+    App(video_src).run()
+    #digits_video.main()
+    cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    main()
