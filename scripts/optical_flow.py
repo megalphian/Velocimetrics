@@ -33,6 +33,8 @@ feature_params = dict( maxCorners = 500,
                        minDistance = 7,
                        blockSize = 7 )
 
+_Plotting = plotting()
+
 class App:
     def __init__(self, video_src):
         self.track_len = 10
@@ -44,6 +46,10 @@ class App:
         cascade_src = '../data/cars.xml'
         self.good_speed = None
         self._speed = None
+        self.car_each_frame = []
+        self.car_counter = 0
+
+        _Plotting.launch_plt()
 
     def run(self):
     	global counter
@@ -63,8 +69,13 @@ class App:
             vis = frame.copy()
     	    cv2.GaussianBlur(vis, (15, 15), 0)
     	    cars = car_cascade.detectMultiScale(vis, 1.1, 1)
+            self.car_each_frame.append([len(cars), self.frame_idx])
+            _Plotting.xdata.append(self.frame_idx)
+            _Plotting.ydata.append(len(cars))
             cv2.putText(vis, "cars detected", (10, 140), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), thickness = 2)
             cv2.putText(vis, str(len(cars)), (20, 170), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), thickness = 3)
+            _Plotting.on_running()
+
             if len(self.tracks) > 0:
                 img0, img1 = self.prev_gray, frame_gray
                 p0 = np.float32([tr[-1] for tr in self.tracks]).reshape(-1, 1, 2)
@@ -75,8 +86,6 @@ class App:
                 good = d < 1
                 self._speed = (p1-p0)*fps
                 self.good_speed = self._speed < 0
-
-                point_graph(self._speed)
 
                 print(len(self._speed), len(self.tracks))
 
@@ -112,6 +121,7 @@ class App:
                     count  = count + 1
                 if pt_in > 0 and clock() - t < 0.025:
                     cv2.putText(vis, str(round(speed_sum/pt_in, 2)), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), thickness = 2)
+
             if self.frame_idx % self.detect_interval == 0:
                 #counter +=1
                 #print ("Counter ", counter)
@@ -133,6 +143,8 @@ class App:
             #raw_input("Press Enter to continue...")
             if ch == 27:
                     break
+        plt.show()
+
 
 def main():
     import sys
