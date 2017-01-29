@@ -189,6 +189,9 @@ void detectAndDraw( Mat& img, CascadeClassifier& cascade,
     //printf( "detection time = %g ms\n", t*1000/getTickFrequency());
     for ( size_t i = 0; i < faces.size(); i++ )
     {
+        if(i > 1){
+          break;
+        }
         show_speed = true;
         Rect r = faces[i];
         Mat smallImgROI;
